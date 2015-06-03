@@ -21,9 +21,34 @@ INT_PTR CALLBACK	About(HWND, UINT, WPARAM, LPARAM);
 HWND hWnd;
 HBITMAP hBitmap = NULL;
 int sizeX=800, sizeY=600;
+int nWidth = 0;  // ширина рабочей области 
+int nHeight = 0; // высота рабочей области 
+
 std::vector<unsigned char> bits;
 void Render();
 
+HBITMAP CreateBitmap(int x, int y)
+{
+	//create bmp
+	BITMAPINFO bmi;
+	ZeroMemory(&bmi, sizeof(BITMAPINFO));
+	bmi.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
+	bmi.bmiHeader.biBitCount = 32;
+	bmi.bmiHeader.biHeight = y;
+	bmi.bmiHeader.biWidth = x;
+	bmi.bmiHeader.biPlanes = 1;
+
+	HDC dc;
+	dc = CreateCompatibleDC(NULL);
+
+	bits.resize(x*y * 4);
+	HBITMAP bitmap = CreateDIBSection(dc, &bmi, DIB_RGB_COLORS, (void**)(&bits[0]), NULL, 0);
+	DeleteDC(dc);
+
+	return bitmap;
+}
+
+void DeleteBitmap(HBITMAP bitmap);
 
 int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
                      _In_opt_ HINSTANCE hPrevInstance,
@@ -117,6 +142,11 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
       return FALSE;
    }
 
+   RECT rec;
+   GetClientRect(hWnd, &rec);
+   sizeX = rec.right - rec.left;
+   sizeY = rec.bottom - rec.top;
+
    ShowWindow(hWnd, nCmdShow);
    UpdateWindow(hWnd);
 
@@ -142,21 +172,19 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	switch (message)
 	{
 	case WM_CREATE:
-		BITMAPINFO bmi;
-		ZeroMemory(&bmi, sizeof(BITMAPINFO));
-		bmi.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
-		bmi.bmiHeader.biBitCount = 32;
-		bmi.bmiHeader.biHeight = sizeY;
-		bmi.bmiHeader.biWidth = sizeX;
-		bmi.bmiHeader.biPlanes = 1;
+		
 
-		HDC dc;
-		dc = CreateCompatibleDC(NULL);
-
-		bits.resize(sizeX*sizeY * 4);
-		hBitmap = CreateDIBSection(dc, &bmi, DIB_RGB_COLORS, (void**)(&bits[0]), NULL, 0);
-		DeleteDC(dc);
-
+		break;
+	case WM_SIZE:
+		//if (wParam)// флажок изменения размеров 
+		{
+			nWidth = LOWORD(lParam);  // ширина рабочей области 
+			nHeight = HIWORD(lParam); // высота рабочей области
+			DeleteObject(hBitmap);
+			hBitmap=CreateBitmap(nWidth, nHeight);
+			sizeX = nWidth;
+			sizeY = nHeight;
+		}
 		break;
 	case WM_COMMAND:
 		wmId    = LOWORD(wParam);
